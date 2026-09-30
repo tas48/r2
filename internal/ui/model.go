@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -26,11 +25,14 @@ type Model struct {
 	now    time.Time
 
 	banner string
+	help   bool
+
+	theme theme
 }
 
 // New builds the initial model. persist may be nil to disable persistence.
 func New(ag *agent.Agent, persist func(agent.State) error) Model {
-	return Model{agent: ag, persist: persist}
+	return Model{agent: ag, persist: persist, theme: newTheme()}
 }
 
 // Init schedules the first tick.
@@ -50,20 +52,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.now = time.Time(msg)
 		m.applyEvents(m.agent.Step(m.now))
 		return m, tick()
-	}
-	return m, nil
-}
-
-func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	case "w":
-		m.drink()
-	case "b":
-		m.takeBreak()
-	case "space":
-		// Pet interaction lands with the pet; nothing to do yet.
 	}
 	return m, nil
 }
@@ -108,22 +96,6 @@ func (m Model) View() tea.View {
 	v.AltScreen = true
 	v.WindowTitle = "r2"
 	return v
-}
-
-func (m Model) render() string {
-	if m.width == 0 {
-		return "r2\n\nwaiting for terminal size...\n\npress q to quit"
-	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "r2  %s\n\n", m.now.Format("15:04:05"))
-	if m.banner != "" {
-		fmt.Fprintf(&b, "%s\n\n", m.banner)
-	}
-	water := m.agent.Water()
-	fmt.Fprintf(&b, "water  %d/%d ml\n", water.ConsumedML, water.GoalML)
-	fmt.Fprintf(&b, "breaks %d\n", m.agent.Breaks().BreaksToday)
-	b.WriteString("\nw drink · b break · q quit")
-	return b.String()
 }
 
 func tick() tea.Cmd {

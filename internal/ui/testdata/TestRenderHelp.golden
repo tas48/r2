@@ -1,0 +1,20 @@
+r2  09:00
+help
+
+w      drink a bottle of water
+b      log a break
+space  interact with the pet
+?      toggle this help
+q      quit
+
+
+
+
+
+
+
+
+
+
+water 500/2000ml · breaks 0
+w drink · b break · ? help · q quit
