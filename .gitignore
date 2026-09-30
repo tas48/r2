@@ -1,0 +1,11 @@
+# Air / local build artifacts
+tmp/
+build-errors.log
+
+# Test and coverage output
+*.out
+*.test
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

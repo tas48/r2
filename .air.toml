@@ -1,0 +1,28 @@
+# Live reload for development. Install the binary once with:
+#   go install github.com/air-verse/air@latest
+# Then run: air
+#
+# Air is intentionally NOT a module dependency: it drags in heavy transitive
+# packages (e.g. Hugo) that have no place in r2's dependency graph.
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/r2.exe ./cmd/r2"
+  bin = "./tmp/r2.exe"
+  include_ext = ["go"]
+  exclude_dir = ["tmp", ".git", "vendor"]
+  exclude_regex = ["_test.go"]
+  delay = 300
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "1s"
+  log = "build-errors.log"
+
+[misc]
+  clean_on_exit = true
+
+[screen]
+  clear_on_rebuild = false
+  keep_scroll = true
