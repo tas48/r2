@@ -66,3 +66,17 @@ func TestLoadRejectsInvalidDuration(t *testing.T) {
 		t.Fatal("expected an error for an invalid duration")
 	}
 }
+
+func TestEnsureCreatesDefaultFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "config.json")
+	got, err := Ensure(path)
+	if err != nil {
+		t.Fatalf("ensure failed: %v", err)
+	}
+	if got != Default() {
+		t.Fatalf("expected defaults, got %#v", got)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected config file to be created: %v", err)
+	}
+}

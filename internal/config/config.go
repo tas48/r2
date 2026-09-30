@@ -76,6 +76,18 @@ func Load(path string) (Config, error) {
 	return cfg, nil
 }
 
+// Ensure loads the config, writing defaults to path when the file is missing.
+func Ensure(path string) (Config, error) {
+	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+		cfg := Default()
+		if err := Save(path, cfg); err != nil {
+			return Config{}, err
+		}
+		return cfg, nil
+	}
+	return Load(path)
+}
+
 // Save writes the config atomically, creating the parent directory if needed.
 func Save(path string, cfg Config) error {
 	data, err := json.MarshalIndent(cfg, "", "  ")
