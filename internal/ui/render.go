@@ -5,9 +5,16 @@ import (
 	"strings"
 )
 
-// render lays out the active dashboard elements for the current size.
+// render lays out the active dashboard elements for the current size. Elements
+// are emitted top-down with a fixed priority and clipped to the terminal height
+// so content never overflows a tiny window.
 func (m Model) render() string {
-	l := compute(m.width, m.height, m.banner != "")
+	if m.width <= 0 || m.height <= 0 {
+		return ""
+	}
+	weather := m.weatherLines(m.width)
+	alert := m.alertLine() != ""
+	l := compute(m.width, m.height, m.banner != "", alert, len(weather))
 	if l.Width == 0 {
 		return ""
 	}
@@ -18,14 +25,22 @@ func (m Model) render() string {
 	if l.Banner {
 		rows = append(rows, m.theme.banner.Render(truncate(m.banner, l.Width)), "")
 	}
+	if l.Alert {
+		rows = append(rows, m.theme.alert.Render(truncate(m.alertLine(), l.Width)))
+	}
 	if l.Weather {
-		rows = append(rows, m.theme.weather.Render(truncate(m.weatherLine(), l.Width)))
+		for _, line := range weather {
+			rows = append(rows, m.theme.weather.Render(line))
+		}
 	}
 	if l.Status {
 		rows = append(rows, m.theme.status.Render(truncate(m.statusLine(), l.Width)))
 	}
 	if l.Hint {
 		rows = append(rows, m.theme.hint.Render(truncate(m.hintLine(), l.Width)))
+	}
+	if len(rows) > l.Height {
+		rows = rows[:l.Height]
 	}
 	return strings.Join(rows, "\n")
 }
@@ -75,7 +90,7 @@ func (m Model) helpLines() []string {
 		"q      quit",
 	}
 	if m.weather != nil {
-		items = append([]string{fmt.Sprintf("weather for %s", m.city), ""}, items...)
+		items = append([]string{fmt.Sprintf("weather for %s", m.place.Name), ""}, items...)
 	}
 	lines := make([]string, len(items))
 	for i, item := range items {

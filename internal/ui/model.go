@@ -22,7 +22,7 @@ type Model struct {
 	agent   *agent.Agent
 	persist func(agent.State) error
 	weather weather.Provider
-	city    string
+	place   Place
 
 	width  int
 	height int
@@ -39,8 +39,8 @@ type Model struct {
 
 // New builds the initial model. persist may be nil to disable persistence;
 // provider may be nil to disable weather.
-func New(ag *agent.Agent, provider weather.Provider, city string, persist func(agent.State) error) Model {
-	return Model{agent: ag, weather: provider, city: city, persist: persist, theme: newTheme()}
+func New(ag *agent.Agent, provider weather.Provider, place Place, persist func(agent.State) error) Model {
+	return Model{agent: ag, weather: provider, place: place, persist: persist, theme: newTheme()}
 }
 
 // Init schedules the first tick and, when configured, the first forecast fetch.
@@ -102,6 +102,7 @@ func (m *Model) applyEvents(events []agent.Event) tea.Cmd {
 		case agent.WeatherUpdated:
 			if e.Err != nil {
 				m.weatherErr = e.Err
+				m.banner = "Weather unavailable."
 			} else if e.RainLikely {
 				m.banner = fmt.Sprintf("Rain likely (%d%%) — close the window", e.RainProb)
 			}

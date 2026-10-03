@@ -18,40 +18,49 @@ type Layout struct {
 
 	Header  bool
 	Banner  bool
+	Alert   bool
 	Weather bool
 	Status  bool
 	Hint    bool
 }
 
-// compute fits elements top-down with a fixed priority: header, banner,
-// weather, status, hint. Elements are dropped from the bottom (hint first)
-// when the terminal is too short. The banner is reserved before the weather.
-func compute(width, height int, hasBanner bool) Layout {
+// compute fits elements top-down in priority order: header, banner, alert,
+// weather, status, hint. Each element is added only if its minimum width fits
+// and at least one row remains. Weather consumes as many of the remaining rows
+// as it has lines. The renderer clips the final output to Height.
+func compute(width, height int, hasBanner, hasAlert bool, weatherLines int) Layout {
 	if width <= 0 || height <= 0 {
 		return Layout{}
 	}
 	l := Layout{Width: width, Height: height}
-
 	rows := 0
-	if width >= headerMinWidth && rows+1 <= height {
-		l.Header = true
-		rows++
+
+	add := func(minWidth int, rowsNeeded int, target *bool) {
+		if rowsNeeded <= 0 {
+			return
+		}
+		if width >= minWidth && rows+rowsNeeded <= height {
+			*target = true
+			rows += rowsNeeded
+		}
 	}
-	if hasBanner && rows+bannerRows <= height {
-		l.Banner = true
-		rows += bannerRows
+
+	add(headerMinWidth, 1, &l.Header)
+	if hasBanner {
+		add(headerMinWidth, bannerRows, &l.Banner)
 	}
-	if width >= weatherMinWidth && rows+1 <= height {
-		l.Weather = true
-		rows++
+	if hasAlert {
+		add(statusMinWidth, 1, &l.Alert)
 	}
-	if width >= statusMinWidth && rows+1 <= height {
-		l.Status = true
-		rows++
-	}
-	if width >= hintMinWidth && rows+1 <= height {
-		l.Hint = true
-		rows++
-	}
+	add(weatherMinWidth, bounded(weatherLines, height-rows), &l.Weather)
+	add(statusMinWidth, 1, &l.Status)
+	add(hintMinWidth, 1, &l.Hint)
 	return l
+}
+
+func bounded(want, available int) int {
+	if want > available {
+		return available
+	}
+	return want
 }

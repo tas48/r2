@@ -2,21 +2,25 @@ package app
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/tas48/r2/internal/agent"
 	"github.com/tas48/r2/internal/config"
+	"github.com/tas48/r2/internal/geo"
 	"github.com/tas48/r2/internal/store"
 	"github.com/tas48/r2/internal/ui"
 	"github.com/tas48/r2/internal/weather"
 )
 
-// Run wires config, persistence, the agent, weather and the TUI, then runs the
-// program.
+// Run wires config, persistence, the agent, location, weather and the TUI,
+// then runs the program.
 func Run() error {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	now := time.Now()
 
 	cfgPath, err := config.Path()
@@ -40,12 +44,52 @@ func Run() error {
 	ag := agent.New(toAgentConfig(cfg), now)
 	ag.Seed(toAgentState(st), now)
 
-	provider := weather.NewOpenMeteo(&http.Client{Timeout: 10 * time.Second}, cfg.RainThreshold, cfg.RainHorizonH)
+	client := &http.Client{Timeout: 10 * time.Second}
+	place := resolvePlace(logger, client, cfg.City)
+	provider := weather.NewOpenMeteo(client, cfg.RainThreshold, cfg.RainHorizonH)
 
-	if _, err := tea.NewProgram(ui.New(ag, provider, cfg.City, persistFunc(statePath))).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.New(ag, provider, place, persistFunc(statePath))).Run(); err != nil {
 		return fmt.Errorf("running tui: %w", err)
 	}
 	return nil
+}
+
+// Place is where the dashboard should fetch weather from. When coordinates are
+// known the provider uses them directly (more precise than the city name).
+type Place = ui.Place
+
+// resolvePlace tries precise location, then reverse-geocodes it to a readable
+// name, and finally falls back to the configured city.
+func resolvePlace(logger *slog.Logger, client *http.Client, fallbackCity string) ui.Place {
+	ctx, cancel := contextWithTimeout(8 * time.Second)
+	defer cancel()
+
+	location, err := geo.DefaultResolver(logger).Locate(ctx)
+	if err != nil {
+		logger.Warn("using configured city; location lookup failed", "city", fallbackCity, "error", err)
+		return ui.Place{Name: fallbackCity}
+	}
+
+	name := firstNonEmpty(location.City, fallbackCity)
+	reverse := weather.NewReverseGeocoder(client)
+	if refined, err := reverse.Name(ctx, location.Latitude, location.Longitude); err == nil && refined != "" {
+		name = refined
+	}
+	return ui.Place{
+		Name:      name,
+		Latitude:  location.Latitude,
+		Longitude: location.Longitude,
+		HasCoords: true,
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func persistFunc(path string) func(agent.State) error {

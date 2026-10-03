@@ -7,6 +7,7 @@ import "charm.land/lipgloss/v2"
 type theme struct {
 	header  lipgloss.Style
 	banner  lipgloss.Style
+	alert   lipgloss.Style
 	status  lipgloss.Style
 	hint    lipgloss.Style
 	help    lipgloss.Style
@@ -17,6 +18,7 @@ func newTheme() theme {
 	return theme{
 		header:  lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14")),
 		banner:  lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214")),
+		alert:   lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("203")),
 		status:  lipgloss.NewStyle().Foreground(lipgloss.Color("12")),
 		hint:    lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
 		help:    lipgloss.NewStyle().Foreground(lipgloss.Color("250")),

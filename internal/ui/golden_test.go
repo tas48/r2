@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	golden "github.com/charmbracelet/x/exp/golden"
 
@@ -11,13 +12,44 @@ import (
 	"github.com/tas48/r2/internal/weather"
 )
 
+func sampleForecast() weather.Forecast {
+	now := base
+	hours := make([]weather.HourSample, 0, 6)
+	for i := 0; i < 6; i++ {
+		hours = append(hours, weather.HourSample{
+			Time:     now.Add(time.Duration(i) * time.Hour),
+			TempC:    20 + float64(i),
+			RainProb: 10 * i,
+			WindKph:  12,
+		})
+	}
+	return weather.Forecast{
+		Location:   "Rio Paranaiba",
+		RainProb:   70,
+		TempC:      24,
+		FeelsLikeC: 26,
+		WindKph:    18,
+		Humidity:   63,
+		UVIndex:    7,
+		IsDay:      true,
+		NextHours:  hours,
+		Daily: []weather.DaySample{
+			{Date: now, TempMinC: 18, TempMaxC: 29, RainProb: 70, WindKph: 18},
+			{Date: now.Add(24 * time.Hour), TempMinC: 17, TempMaxC: 27, RainProb: 30, WindKph: 14},
+			{Date: now.Add(48 * time.Hour), TempMinC: 16, TempMaxC: 26, RainProb: 10, WindKph: 10},
+		},
+	}
+}
+
 func sizedModel(width, height int) Model {
 	ag := agent.New(agent.DefaultConfig(), base)
 	ag.Drink(base)
-	m := New(ag, nil, "", nil)
+	m := New(ag, nil, Place{Name: "Rio Paranaiba"}, nil)
 	m.width = width
 	m.height = height
 	m.now = base
+	m.hasWeather = true
+	m.forecast = sampleForecast()
 	return m
 }
 
@@ -30,21 +62,13 @@ func TestRenderSizeMatrix(t *testing.T) {
 	golden.RequireEqual(t, b.String())
 }
 
-func TestRenderBanner(t *testing.T) {
-	m := sizedModel(40, 15)
-	m.banner = "Time to drink water (500/2000 ml today)"
-	golden.RequireEqual(t, plain(m.render()))
-}
-
-func TestRenderTinyBanner(t *testing.T) {
-	m := sizedModel(20, 4)
-	m.banner = "Time to drink water"
-	golden.RequireEqual(t, plain(m.render()))
-}
-
-func TestRenderWeather(t *testing.T) {
+func TestRenderWeatherAlert(t *testing.T) {
 	m := sizedModel(60, 20)
-	m.hasWeather = true
-	m.forecast = weather.Forecast{RainProb: 70, TempC: 24, WindKph: 18, RainLikely: true}
+	m.forecast.Alerts = append(m.forecast.Alerts, weather.Alert{Kind: weather.AlertHeat, Text: "Heat alert: feels like 39°C"})
+	golden.RequireEqual(t, plain(m.render()))
+}
+
+func TestRenderTinyWeather(t *testing.T) {
+	m := sizedModel(20, 4)
 	golden.RequireEqual(t, plain(m.render()))
 }

@@ -9,20 +9,37 @@ import (
 	"github.com/tas48/r2/internal/weather"
 )
 
+// Place is where weather comes from: a display name plus optional coordinates
+// resolved from IP or the Windows Location API.
+type Place struct {
+	Name      string
+	Latitude  float64
+	Longitude float64
+	HasCoords bool
+}
+
 // weatherMsg carries the result of an asynchronous forecast fetch.
 type weatherMsg struct {
 	forecast weather.Forecast
 	err      error
 }
 
-// fetch runs the network call off the update loop.
+// fetch runs the network call off the update loop, preferring coordinates.
 func (m Model) fetch() tea.Cmd {
 	provider := m.weather
-	city := m.city
+	place := m.place
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 		defer cancel()
-		forecast, err := provider.Forecast(ctx, city)
+		var (
+			forecast weather.Forecast
+			err      error
+		)
+		if place.HasCoords {
+			forecast, err = provider.ForecastAt(ctx, place.Name, place.Latitude, place.Longitude)
+		} else {
+			forecast, err = provider.Forecast(ctx, place.Name)
+		}
 		return weatherMsg{forecast: forecast, err: err}
 	}
 }
