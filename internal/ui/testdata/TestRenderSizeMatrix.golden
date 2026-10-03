@@ -1,14 +1,14 @@
 == 10x3 ==
-
-
-
+  /\_/\
+ ( o.o )
+  > ^ <
 
 == 20x8 ==
 r2  09:00
 
-
-
-
+       /\_/\
+      ( o.o )
+       > ^ <
 
 500/2000ml
 ? help · q quit
@@ -17,9 +17,9 @@ r2  09:00
 r2  09:00
 
 
-
-
-
+            /\_/\
+           ( o.o )
+            > ^ <
 
 
 water 500/2000ml · breaks 0
@@ -31,26 +31,26 @@ r2  09:00
 
 
 
-
-
-
+                 /\_/\
+                ( o.o )
+                 > ^ <
 
 
 
 
 
 water 500/2000ml · breaks 0
-w drink · b break · ? help · q quit
+w drink · b break · space pet · ? help · q quit
 
 == 100x8 ==
 r2  09:00
 
-
-
-
+                                               /\_/\
+                                              ( o.o )
+                                               > ^ <
 
 water 500/2000ml · breaks 0
-w drink · b break · ? help · q quit
+w drink · b break · space pet · ? help · q quit
 
 == 30x30 ==
 r2  09:00
@@ -66,9 +66,9 @@ r2  09:00
 
 
 
-
-
-
+            /\_/\
+           ( o.o )
+            > ^ <
 
 
 
@@ -95,9 +95,9 @@ r2  09:00
 
 
 
-
-
-
+                                     /\_/\
+                                    ( o.o )
+                                     > ^ <
 
 
 
@@ -108,7 +108,7 @@ r2  09:00
 
 
 water 500/2000ml · breaks 0
-w drink · b break · ? help · q quit
+w drink · b break · space pet · ? help · q quit
 
 == 120x40 ==
 r2  09:00
@@ -129,9 +129,9 @@ r2  09:00
 
 
 
-
-
-
+                                                         /\_/\
+                                                        ( o.o )
+                                                         > ^ <
 
 
 
@@ -150,5 +150,5 @@ r2  09:00
 
 
 water 500/2000ml · breaks 0
-w drink · b break · ? help · q quit
+w drink · b break · space pet · ? help · q quit
 

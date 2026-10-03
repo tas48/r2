@@ -2,12 +2,14 @@ package app
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/tas48/r2/internal/agent"
 	"github.com/tas48/r2/internal/config"
+	"github.com/tas48/r2/internal/pet"
 	"github.com/tas48/r2/internal/store"
 	"github.com/tas48/r2/internal/ui"
 )
@@ -37,7 +39,9 @@ func Run() error {
 	ag := agent.New(toAgentConfig(cfg), now)
 	ag.Seed(toAgentState(st), now)
 
-	if _, err := tea.NewProgram(ui.New(ag, persistFunc(statePath))).Run(); err != nil {
+	companion := pet.New(now, rand.New(rand.NewSource(time.Now().UnixNano())))
+
+	if _, err := tea.NewProgram(ui.New(ag, companion, persistFunc(statePath))).Run(); err != nil {
 		return fmt.Errorf("running tui: %w", err)
 	}
 	return nil

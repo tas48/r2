@@ -8,12 +8,13 @@ import (
 	golden "github.com/charmbracelet/x/exp/golden"
 
 	"github.com/tas48/r2/internal/agent"
+	"github.com/tas48/r2/internal/pet"
 )
 
 func sizedModel(width, height int) Model {
 	ag := agent.New(agent.DefaultConfig(), base)
 	ag.Drink(base)
-	m := New(ag, nil)
+	m := New(ag, pet.New(base, nil), nil)
 	m.width = width
 	m.height = height
 	m.now = base

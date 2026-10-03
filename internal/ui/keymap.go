@@ -13,7 +13,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.help = !m.help
 	case "space":
-		// Pet interaction lands with the pet; nothing to do yet.
+		m.interact()
 	}
 	return m, nil
 }

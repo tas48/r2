@@ -10,6 +10,7 @@ type theme struct {
 	status lipgloss.Style
 	hint   lipgloss.Style
 	help   lipgloss.Style
+	pet    lipgloss.Style
 }
 
 func newTheme() theme {
@@ -19,5 +20,6 @@ func newTheme() theme {
 		status: lipgloss.NewStyle().Foreground(lipgloss.Color("12")),
 		hint:   lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
 		help:   lipgloss.NewStyle().Foreground(lipgloss.Color("250")),
+		pet:    lipgloss.NewStyle().Foreground(lipgloss.Color("15")),
 	}
 }

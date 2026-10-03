@@ -3,6 +3,9 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/tas48/r2/internal/pet"
 )
 
 // render lays out the active elements for the current terminal size.
@@ -44,7 +47,7 @@ func (m Model) statusLine() string {
 func (m Model) hintLine() string {
 	switch {
 	case m.width >= 38:
-		return "w drink · b break · ? help · q quit"
+		return "w drink · b break · space pet · ? help · q quit"
 	case m.width >= 20:
 		return "? help · q quit"
 	default:
@@ -52,23 +55,59 @@ func (m Model) hintLine() string {
 	}
 }
 
-// stageLines returns the pet area. Until the pet lands it is blank, or shows
-// the help overlay when toggled.
+// stageLines returns the pet area: the pet sprite centered vertically, or the
+// help overlay when toggled.
 func (m Model) stageLines(rows int) []string {
 	lines := make([]string, rows)
-	if !m.help {
+	if rows <= 0 {
 		return lines
 	}
-	for i, line := range m.helpLines() {
-		if i >= rows {
+	if m.help {
+		for i, line := range m.helpLines() {
+			if i >= rows {
+				break
+			}
+			if line == "" {
+				continue
+			}
+			lines[i] = m.theme.help.Render(line)
+		}
+		return lines
+	}
+	sprite := pet.SpriteFor(m.pet.State(), spriteSizeFor(rows))
+	frame := sprite.Frames[frameIndex(sprite, m.now.Sub(m.pet.Since()))]
+	x := m.pet.X()
+	if x < 0 {
+		x = (m.width - sprite.Width) / 2
+	}
+	top := (rows - sprite.Height) / 2
+	if top < 0 {
+		top = 0
+	}
+	for i, line := range frame {
+		row := top + i
+		if row >= rows {
 			break
 		}
-		if line == "" {
-			continue
-		}
-		lines[i] = m.theme.help.Render(line)
+		lines[row] = m.theme.pet.Render(placeAt(line, x))
 	}
 	return lines
+}
+
+// stageMaxX is the highest column the pet may walk to for the current layout.
+func (m Model) stageMaxX() int {
+	if m.pet == nil {
+		return 0
+	}
+	l := compute(m.width, m.height, m.banner != "")
+	if l.Stage.H <= 0 {
+		return 0
+	}
+	width := pet.SpriteFor(m.pet.State(), spriteSizeFor(l.Stage.H)).Width
+	if maxX := l.Stage.W - width; maxX > 0 {
+		return maxX
+	}
+	return 0
 }
 
 func (m Model) helpLines() []string {
@@ -86,6 +125,34 @@ func (m Model) helpLines() []string {
 		lines[i] = truncate(item, m.width)
 	}
 	return lines
+}
+
+func spriteSizeFor(stageRows int) pet.Size {
+	switch {
+	case stageRows >= 3:
+		return pet.SizeFull
+	case stageRows == 2:
+		return pet.SizeCompact
+	default:
+		return pet.SizeMini
+	}
+}
+
+func frameIndex(sprite pet.Sprite, elapsed time.Duration) int {
+	if len(sprite.Frames) == 0 || sprite.FrameDur <= 0 || elapsed <= 0 {
+		return 0
+	}
+	return int(elapsed/sprite.FrameDur) % len(sprite.Frames)
+}
+
+// placeAt left-pads a line to column x, trimming trailing spaces to keep the
+// output free of trailing whitespace.
+func placeAt(line string, x int) string {
+	line = strings.TrimRight(line, " ")
+	if x <= 0 {
+		return line
+	}
+	return strings.Repeat(" ", x) + line
 }
 
 // truncate shortens s to width runes, appending an ellipsis when clipped.
