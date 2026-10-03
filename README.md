@@ -4,23 +4,22 @@ A terminal-based companion that keeps you informed, focused, and taking care of
 yourself throughout the day.
 
 r2 is a small, rule-based agent that lives in a dedicated terminal window. It
-reminds you to drink water, nudges you to take breaks, checks the weather for
-your city, and tracks your progress — all presented through a small
-ASCII/Unicode pet with a bit of personality.
+reminds you to drink water, nudges you to take breaks, and shows a live weather
+dashboard for your location — with rain chances for the coming hours, the next
+days, wind, humidity, UV and heat/cold/rain alerts. No AI, no cloud account, no
+magic: just explicit rules, a few JSON files, and a terminal-native interface
+that stays readable from a 10x3 window to a 120x40 one.
 
-No AI, no cloud account, no magic. Just explicit rules, a few JSON files, and a
-terminal-native interface that stays responsive from a 10x3 window to a 120x40
-one.
-
-> **Status: work in progress.** The agent core, configuration, persistence and
-> the responsive layout are in place. The pet and the weather integration are
-> next; see the [Roadmap](#roadmap).
+> **Status: work in progress.** The agent core, persistence, precise location
+> resolution, the weather provider and the responsive dashboard are in place.
+> See the [Roadmap](#roadmap).
 
 ## Why
 
 Most reminder tools assume a full GUI or send you away from your work. r2 does
-the opposite: it stays where you already are — the terminal — and gives you a
-small creature to take care of that quietly takes care of you.
+the opposite: it stays where you already are — the terminal — showing the
+information you actually want (weather, water, breaks) as a compact, icon-led
+dashboard that adapts to the window you have.
 
 ## Features
 
@@ -29,20 +28,21 @@ small creature to take care of that quietly takes care of you.
 - **Break reminders** so you actually get up from the chair.
 - **Daily counters** for water and breaks, resetting automatically at midnight.
 - **Persistent state** — progress survives restarts.
-- **Configurable** through a small JSON file; everything else is hardcoded.
-- **Responsive layout** that adapts to tiny and large terminals, dropping
-  secondary elements before the essentials.
-- **A pet** that reacts to what you do (in progress).
+- **Weather dashboard**: current conditions, next hours, the following days,
+  wind, humidity and UV, with icons for sun, clouds, rain, wind, cold and night.
+- **Local alerts**: heat, cold, strong wind and likely rain.
+- **Automatic location**: resolved from the Windows Location API (most precise),
+  falling back to IP geolocation, then refined with reverse geocoding to the
+  city or neighbourhood.
+- **Responsive layout** that drops secondary elements before the essentials.
 
 ## Keys
 
-| Key         | Action                    |
-| ----------- | ------------------------- |
-| `w`         | Log a bottle of water     |
-| `b`         | Log a break               |
-| `space`     | Interact with the pet     |
-| `?`         | Toggle help               |
-| `q`/`ctrl+c`| Quit                      |
+| Key          | Action                    |
+| ------------ | ------------------------- |
+| `w`          | Log a bottle of water     |
+| `b`          | Log a break               |
+| `q`/`ctrl+c` | Quit                      |
 
 ## Install
 
@@ -71,12 +71,17 @@ On first run r2 writes a default config to your user config directory:
   "water_goal_ml": 2000,
   "bottle_ml": 500,
   "water_every": "30m",
-  "break_every": "45m"
+  "break_every": "45m",
+  "weather_every": "15m",
+  "rain_threshold": 50,
+  "rain_horizon_hours": 6
 }
 ```
 
 Durations use Go syntax (`"30m"`, `"1h30m"`). Missing fields fall back to the
-defaults, so a partial file is fine.
+defaults, so a partial file is fine. `city` is only used when automatic
+location resolution fails; `rain_threshold` is the chance of rain (percent)
+that triggers the "close the window" alert.
 
 ## State
 
@@ -92,27 +97,41 @@ cmd/r2/            entrypoint
 internal/agent/    scheduler, trackers, reminders, events (pure, no IO)
 internal/config/   JSON configuration and defaults
 internal/store/    daily state persistence and reset
-internal/pet/      pet state machine, animation, movement (pure)
-internal/weather/  weather provider interface and Open-Meteo implementation
-internal/ui/       Bubble Tea model, layout, rendering, keymap, theme
-internal/app/      wiring: config -> store -> agent -> pet -> ui
+internal/geo/      location resolution: Windows API, IP geolocation, resolver
+internal/weather/  weather provider, Open-Meteo and reverse geocoding
+internal/ui/       Bubble Tea model, layout, rendering, theme
+internal/app/      wiring: config -> store -> agent -> geo -> weather -> ui
 ```
 
-The **agent never performs IO**. When it needs something from the outside
-(like a weather forecast), it emits an event; the UI turns that event into a
-Bubble Tea command. The **pet** never knows about the agent or the UI — it only
-reacts to events.
+The **agent never performs IO**. When it needs something from the outside (like
+a weather forecast), it emits an event; the UI turns that event into a Bubble Tea
+command. Network calls never run inside the update loop.
+
+## Locations and weather
+
+On startup r2 resolves your location, most precise first:
+
+1. **Windows Location API** (`Windows.Devices.Geolocation`), which uses
+   GPS/Wi-Fi/cell — the most accurate option, if location access is allowed.
+2. **IP geolocation** (keyless, city-level): `ipwho.is`, then `ipinfo.io`, then
+   `freeipapi.com`.
+3. **Configured city** as the final fallback.
+
+The coordinates are then reverse-geocoded (BigDataCloud, keyless) to a readable
+city or neighbourhood name. Weather comes from Open-Meteo, also keyless, and
+includes current conditions, the next hours, the following days, wind, humidity,
+UV and locally-derived heat/cold/wind/rain alerts.
 
 ## Roadmap
 
 - [x] **M0** — Bubble Tea v2 alt-screen skeleton, tick loop, quit.
 - [x] **M1** — rule-based agent: scheduler, water/break trackers, events.
 - [x] **M2** — JSON config, daily state persistence, app wiring.
-- [x] **M3** — responsive layout by priority, theme, help overlay.
-- [ ] **M4** — pet: states, transition table, animation, movement, reactions.
-- [ ] **M5** — weather: Open-Meteo geocoding and forecast, async fetch, rain
-      alert.
-- [ ] **M6** — polish, CPU checks, layout golden tests.
+- [x] **M3** — responsive layout by priority, theme.
+- [x] **M4** — precise location (Windows API + IP) and reverse geocoding.
+- [x] **M5** — weather dashboard: current, hourly, daily, wind, humidity, UV,
+      alerts.
+- [ ] **M6** — polish, keyboard help overlay, CPU checks.
 
 ## Development
 
