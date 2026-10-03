@@ -33,20 +33,26 @@ func (d *Duration) UnmarshalJSON(data []byte) error {
 // Config holds the user-tunable parameters. Behavior is hardcoded; only these
 // values change.
 type Config struct {
-	City        string   `json:"city"`
-	WaterGoalML int      `json:"water_goal_ml"`
-	BottleML    int      `json:"bottle_ml"`
-	WaterEvery  Duration `json:"water_every"`
-	BreakEvery  Duration `json:"break_every"`
+	City          string   `json:"city"`
+	WaterGoalML   int      `json:"water_goal_ml"`
+	BottleML      int      `json:"bottle_ml"`
+	WaterEvery    Duration `json:"water_every"`
+	BreakEvery    Duration `json:"break_every"`
+	WeatherEvery  Duration `json:"weather_every"`
+	RainThreshold int      `json:"rain_threshold"`
+	RainHorizonH  int      `json:"rain_horizon_hours"`
 }
 
 func Default() Config {
 	return Config{
-		City:        "Sao Paulo",
-		WaterGoalML: 2000,
-		BottleML:    500,
-		WaterEvery:  Duration(30 * time.Minute),
-		BreakEvery:  Duration(45 * time.Minute),
+		City:          "Sao Paulo",
+		WaterGoalML:   2000,
+		BottleML:      500,
+		WaterEvery:    Duration(30 * time.Minute),
+		BreakEvery:    Duration(45 * time.Minute),
+		WeatherEvery:  Duration(15 * time.Minute),
+		RainThreshold: 50,
+		RainHorizonH:  6,
 	}
 }
 

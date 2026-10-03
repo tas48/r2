@@ -54,7 +54,7 @@ func (o *OpenMeteo) Forecast(ctx context.Context, city string) (Forecast, error)
 	query := url.Values{
 		"latitude":      {strconv.FormatFloat(location.lat, 'f', 4, 64)},
 		"longitude":     {strconv.FormatFloat(location.lon, 'f', 4, 64)},
-		"current":       {"temperature_2m"},
+		"current":       {"temperature_2m,wind_speed_10m"},
 		"hourly":        {"precipitation_probability"},
 		"forecast_days": {"1"},
 		"timezone":      {"auto"},
@@ -62,6 +62,7 @@ func (o *OpenMeteo) Forecast(ctx context.Context, city string) (Forecast, error)
 	var payload struct {
 		Current struct {
 			Temperature float64 `json:"temperature_2m"`
+			WindSpeed   float64 `json:"wind_speed_10m"`
 		} `json:"current"`
 		Hourly struct {
 			Precipitation []int `json:"precipitation_probability"`
@@ -75,6 +76,7 @@ func (o *OpenMeteo) Forecast(ctx context.Context, city string) (Forecast, error)
 	return Forecast{
 		RainProb:   prob,
 		TempC:      payload.Current.Temperature,
+		WindKph:    payload.Current.WindSpeed,
 		RainLikely: prob >= o.rainThreshold,
 		FetchedAt:  time.Now(),
 	}, nil

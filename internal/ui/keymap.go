@@ -10,10 +10,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.drink()
 	case "b":
 		m.takeBreak()
-	case "?":
-		m.help = !m.help
-	case "space":
-		m.interact()
 	}
 	return m, nil
 }

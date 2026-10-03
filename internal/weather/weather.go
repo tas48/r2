@@ -9,6 +9,7 @@ import (
 type Forecast struct {
 	RainProb   int
 	TempC      float64
+	WindKph    float64
 	RainLikely bool
 	FetchedAt  time.Time
 }

@@ -2,38 +2,30 @@ package ui
 
 // Minimum widths at which an element's shortest variant fits.
 const (
-	headerMinWidth = 9
-	statusMinWidth = 10
-	hintMinWidth   = 6
+	headerMinWidth  = 9
+	weatherMinWidth = 8
+	statusMinWidth  = 10
+	hintMinWidth    = 6
 )
-
-// stageMinRows is the smallest pet area worth reserving.
-const stageMinRows = 3
 
 // bannerRows is the banner text plus a separating blank line.
 const bannerRows = 2
 
-// Rect is a rectangular area of the screen.
-type Rect struct {
-	X, Y, W, H int
-}
-
-// Layout describes which elements fit and where the pet stage is.
+// Layout describes which dashboard elements fit vertically and horizontally.
 type Layout struct {
 	Width  int
 	Height int
 
-	Header bool
-	Banner bool
-	Status bool
-	Hint   bool
-
-	Stage Rect
+	Header  bool
+	Banner  bool
+	Weather bool
+	Status  bool
+	Hint    bool
 }
 
-// compute fits elements by priority: the banner is always kept, the pet stage
-// reserves stageMinRows, and status, clock and hint are dropped as space runs
-// out (hint first, then clock, then status).
+// compute fits elements top-down with a fixed priority: header, banner,
+// weather, status, hint. Elements are dropped from the bottom (hint first)
+// when the terminal is too short. The banner is reserved before the weather.
 func compute(width, height int, hasBanner bool) Layout {
 	if width <= 0 || height <= 0 {
 		return Layout{}
@@ -41,34 +33,25 @@ func compute(width, height int, hasBanner bool) Layout {
 	l := Layout{Width: width, Height: height}
 
 	rows := 0
-	if hasBanner {
-		l.Banner = true
-		rows += bannerRows
-	}
-	if width >= statusMinWidth && height-rows-1 >= stageMinRows {
-		l.Status = true
-		rows++
-	}
-	if width >= headerMinWidth && height-rows-1 >= stageMinRows {
+	if width >= headerMinWidth && rows+1 <= height {
 		l.Header = true
 		rows++
 	}
-	if width >= hintMinWidth && height-rows-1 >= stageMinRows {
+	if hasBanner && rows+bannerRows <= height {
+		l.Banner = true
+		rows += bannerRows
+	}
+	if width >= weatherMinWidth && rows+1 <= height {
+		l.Weather = true
+		rows++
+	}
+	if width >= statusMinWidth && rows+1 <= height {
+		l.Status = true
+		rows++
+	}
+	if width >= hintMinWidth && rows+1 <= height {
 		l.Hint = true
 		rows++
 	}
-
-	top := 0
-	if l.Header {
-		top++
-	}
-	if l.Banner {
-		top += bannerRows
-	}
-	stageRows := height - rows
-	if stageRows < 0 {
-		stageRows = 0
-	}
-	l.Stage = Rect{X: 0, Y: top, W: width, H: stageRows}
 	return l
 }

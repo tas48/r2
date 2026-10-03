@@ -7,40 +7,48 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/tas48/r2/internal/agent"
-	"github.com/tas48/r2/internal/pet"
+	"github.com/tas48/r2/internal/weather"
 )
 
 // tickMsg carries the simulation clock forward. A single self-rescheduling
-// tick drives both animation and the reminder scheduler without a busy loop.
+// tick drives the reminder scheduler without a busy loop.
 type tickMsg time.Time
 
 const tickInterval = time.Second
 
-// Model is the root Bubble Tea model. It owns the agent and the pet, and
-// drives both on ticks.
+// Model is the root Bubble Tea model. It owns the agent, drives it on ticks and
+// renders a responsive dashboard.
 type Model struct {
 	agent   *agent.Agent
-	pet     *pet.Pet
 	persist func(agent.State) error
+	weather weather.Provider
+	city    string
 
 	width  int
 	height int
 	now    time.Time
 
 	banner string
-	help   bool
+
+	forecast   weather.Forecast
+	hasWeather bool
+	weatherErr error
 
 	theme theme
 }
 
-// New builds the initial model. persist may be nil to disable persistence.
-func New(ag *agent.Agent, p *pet.Pet, persist func(agent.State) error) Model {
-	return Model{agent: ag, pet: p, persist: persist, theme: newTheme()}
+// New builds the initial model. persist may be nil to disable persistence;
+// provider may be nil to disable weather.
+func New(ag *agent.Agent, provider weather.Provider, city string, persist func(agent.State) error) Model {
+	return Model{agent: ag, weather: provider, city: city, persist: persist, theme: newTheme()}
 }
 
-// Init schedules the first tick.
+// Init schedules the first tick and, when configured, the first forecast fetch.
 func (m Model) Init() tea.Cmd {
-	return tick()
+	if m.weather == nil {
+		return tick()
+	}
+	return tea.Batch(tick(), m.fetch())
 }
 
 // Update handles terminal events.
@@ -51,23 +59,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
+	case weatherMsg:
+		m.hasWeather = true
+		m.forecast = msg.forecast
+		m.weatherErr = msg.err
+		m.applyEvents(m.agent.ApplyWeather(msg.forecast.RainProb, msg.forecast.TempC, msg.forecast.RainLikely, msg.err, m.now))
 	case tickMsg:
-		m.advance(time.Time(msg))
-		return m, tick()
+		m.now = time.Time(msg)
+		return m, m.applyEvents(m.agent.Step(m.now))
 	}
 	return m, nil
-}
-
-// advance moves time forward, steps the agent and the pet, and reacts to the
-// events the agent produced.
-func (m *Model) advance(now time.Time) {
-	dt := now.Sub(m.now)
-	if m.now.IsZero() || dt < 0 {
-		dt = 0
-	}
-	m.now = now
-	m.applyEvents(m.agent.Step(now))
-	m.pet.Step(dt, now, m.stageMaxX())
 }
 
 func (m *Model) drink() {
@@ -80,11 +81,10 @@ func (m *Model) takeBreak() {
 	m.save()
 }
 
-func (m *Model) interact() {
-	m.pet.React(pet.Event{Kind: pet.EventInteract}, m.now)
-}
-
-func (m *Model) applyEvents(events []agent.Event) {
+// applyEvents renders the events and returns any follow-up command, such as an
+// asynchronous weather fetch.
+func (m *Model) applyEvents(events []agent.Event) tea.Cmd {
+	var cmd tea.Cmd
 	for _, ev := range events {
 		switch e := ev.(type) {
 		case agent.ReminderFired:
@@ -95,27 +95,19 @@ func (m *Model) applyEvents(events []agent.Event) {
 			m.banner = "Nice. Break logged."
 		case agent.DayRolled:
 			m.banner = "New day — counters reset."
-		}
-		if petEvent, ok := reactTo(ev); ok {
-			m.pet.React(petEvent, m.now)
+		case agent.WeatherRequested:
+			if m.weather != nil {
+				cmd = m.fetch()
+			}
+		case agent.WeatherUpdated:
+			if e.Err != nil {
+				m.weatherErr = e.Err
+			} else if e.RainLikely {
+				m.banner = fmt.Sprintf("Rain likely (%d%%) — close the window", e.RainProb)
+			}
 		}
 	}
-}
-
-// reactTo maps an agent event to a pet reaction.
-func reactTo(ev agent.Event) (pet.Event, bool) {
-	switch ev.(type) {
-	case agent.WaterLogged:
-		return pet.Event{Kind: pet.EventWater}, true
-	case agent.BreakLogged:
-		return pet.Event{Kind: pet.EventBreak}, true
-	case agent.ReminderFired:
-		return pet.Event{Kind: pet.EventReminder}, true
-	case agent.DayRolled:
-		return pet.Event{Kind: pet.EventDayRolled}, true
-	default:
-		return pet.Event{}, false
-	}
+	return cmd
 }
 
 func (m *Model) save() {

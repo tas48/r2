@@ -8,13 +8,13 @@ import (
 	golden "github.com/charmbracelet/x/exp/golden"
 
 	"github.com/tas48/r2/internal/agent"
-	"github.com/tas48/r2/internal/pet"
+	"github.com/tas48/r2/internal/weather"
 )
 
 func sizedModel(width, height int) Model {
 	ag := agent.New(agent.DefaultConfig(), base)
 	ag.Drink(base)
-	m := New(ag, pet.New(base, nil), nil)
+	m := New(ag, nil, "", nil)
 	m.width = width
 	m.height = height
 	m.now = base
@@ -42,8 +42,9 @@ func TestRenderTinyBanner(t *testing.T) {
 	golden.RequireEqual(t, plain(m.render()))
 }
 
-func TestRenderHelp(t *testing.T) {
+func TestRenderWeather(t *testing.T) {
 	m := sizedModel(60, 20)
-	m.help = true
+	m.hasWeather = true
+	m.forecast = weather.Forecast{RainProb: 70, TempC: 24, WindKph: 18, RainLikely: true}
 	golden.RequireEqual(t, plain(m.render()))
 }

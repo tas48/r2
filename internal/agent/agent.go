@@ -77,7 +77,6 @@ func (a *Agent) ApplyWeather(rainProb int, tempC float64, rainLikely bool, err e
 	a.rainProb, a.rainLikely, a.weatherErr = rainProb, rainLikely, err
 	return []Event{WeatherUpdated{RainProb: rainProb, TempC: tempC, RainLikely: rainLikely, Err: err, At: now}}
 }
-
 func (a *Agent) Water() WaterTracker  { return a.water }
 func (a *Agent) Breaks() BreakTracker { return a.breaks }
 func (a *Agent) Config() Config       { return a.cfg }

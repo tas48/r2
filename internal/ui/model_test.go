@@ -7,7 +7,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/tas48/r2/internal/agent"
-	"github.com/tas48/r2/internal/pet"
 )
 
 var base = time.Date(2026, time.September, 30, 9, 0, 0, 0, time.Local)
@@ -16,12 +15,12 @@ func key(code rune, text string) tea.KeyPressMsg {
 	return tea.KeyPressMsg(tea.Key{Code: code, Text: text})
 }
 
-func newModel(ag *agent.Agent) Model {
-	return New(ag, pet.New(base, nil), nil)
+func newModel() Model {
+	return New(agent.New(agent.DefaultConfig(), base), nil, "", nil)
 }
 
 func TestQuitKey(t *testing.T) {
-	m := newModel(agent.New(agent.DefaultConfig(), base))
+	m := newModel()
 	_, cmd := m.Update(key('q', "q"))
 	if cmd == nil {
 		t.Fatal("expected a command from the quit key")
@@ -31,7 +30,7 @@ func TestQuitKey(t *testing.T) {
 func TestDrinkKeyLogsWaterAndPersists(t *testing.T) {
 	ag := agent.New(agent.DefaultConfig(), base)
 	var saved *agent.State
-	m := New(ag, pet.New(base, nil), func(s agent.State) error { saved = &s; return nil })
+	m := New(ag, nil, "", func(s agent.State) error { saved = &s; return nil })
 	m.now = base
 
 	updated, _ := m.Update(key('w', "w"))
@@ -48,7 +47,7 @@ func TestDrinkKeyLogsWaterAndPersists(t *testing.T) {
 
 func TestBreakKeyLogsBreak(t *testing.T) {
 	ag := agent.New(agent.DefaultConfig(), base)
-	m := newModel(ag)
+	m := New(ag, nil, "", nil)
 	m.now = base
 
 	m.Update(key('b', "b"))
@@ -57,19 +56,9 @@ func TestBreakKeyLogsBreak(t *testing.T) {
 	}
 }
 
-func TestSpaceMakesPetHappy(t *testing.T) {
-	m := newModel(agent.New(agent.DefaultConfig(), base))
-	m.now = base
-
-	updated, _ := m.Update(key(tea.KeySpace, " "))
-	if got := updated.(Model).pet.State(); got != pet.Happy {
-		t.Fatalf("expected happy pet, got %s", got)
-	}
-}
-
 func TestTickFiresReminderBanner(t *testing.T) {
 	ag := agent.New(agent.DefaultConfig(), base)
-	m := newModel(ag)
+	m := New(ag, nil, "", nil)
 
 	updated, _ := m.Update(tickMsg(base.Add(30 * time.Minute)))
 	if updated.(Model).banner == "" {
@@ -79,7 +68,7 @@ func TestTickFiresReminderBanner(t *testing.T) {
 
 func TestTickBeforeIntervalKeepsBannerEmpty(t *testing.T) {
 	ag := agent.New(agent.DefaultConfig(), base)
-	m := newModel(ag)
+	m := New(ag, nil, "", nil)
 
 	updated, _ := m.Update(tickMsg(base.Add(10 * time.Minute)))
 	if updated.(Model).banner != "" {

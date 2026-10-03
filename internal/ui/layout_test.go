@@ -4,55 +4,61 @@ import "testing"
 
 func TestComputeFitsByPriority(t *testing.T) {
 	tests := []struct {
-		name      string
-		width     int
-		height    int
-		banner    bool
-		wantHdr   bool
-		wantBan   bool
-		wantStat  bool
-		wantHint  bool
-		wantStage int
-		wantTop   int
+		name     string
+		width    int
+		height   int
+		banner   bool
+		wantHdr  bool
+		wantBan  bool
+		wantWx   bool
+		wantStat bool
+		wantHint bool
 	}{
-		{"tiny width only stage", 10, 3, false, false, false, false, false, 3, 0},
-		{"tiny with banner keeps banner", 10, 3, true, false, true, false, false, 1, 2},
-		{"banner taller than screen", 10, 2, true, false, true, false, false, 0, 2},
-		{"narrow drops text", 8, 20, false, false, false, false, true, 19, 0},
-		{"small all fit", 20, 8, false, true, false, true, true, 5, 1},
-		{"small header and status only", 20, 5, false, true, false, true, false, 3, 1},
-		{"very short keeps status and stage", 20, 4, false, false, false, true, false, 3, 0},
-		{"too short for status", 20, 2, false, false, false, false, false, 2, 0},
-		{"compact all fit", 30, 10, false, true, false, true, true, 7, 1},
-		{"wide short keeps all", 100, 8, false, true, false, true, true, 5, 1},
-		{"medium", 40, 15, false, true, false, true, true, 12, 1},
-		{"medium with banner", 40, 15, true, true, true, true, true, 10, 3},
-		{"tall", 30, 30, false, true, false, true, true, 27, 1},
-		{"large", 80, 24, false, true, false, true, true, 21, 1},
-		{"huge", 120, 40, false, true, false, true, true, 37, 1},
+		{"one row only header", 20, 1, false, true, false, false, false, false},
+		{"two rows header weather", 20, 2, false, true, false, true, false, false},
+		{"four rows all but hint", 20, 3, false, true, false, true, true, false},
+		{"four rows all fit", 20, 4, false, true, false, true, true, true},
+		{"banner pushes hint out", 20, 4, true, true, true, true, false, false},
+		{"banner plus all", 40, 15, true, true, true, true, true, true},
+		{"narrow width drops weather", 6, 20, false, false, false, false, false, true},
+		{"zero size", 0, 0, false, false, false, false, false, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := compute(tt.width, tt.height, tt.banner)
 			if got.Header != tt.wantHdr || got.Banner != tt.wantBan ||
-				got.Status != tt.wantStat || got.Hint != tt.wantHint {
-				t.Fatalf("flags = header:%v banner:%v status:%v hint:%v, want header:%v banner:%v status:%v hint:%v",
-					got.Header, got.Banner, got.Status, got.Hint,
-					tt.wantHdr, tt.wantBan, tt.wantStat, tt.wantHint)
+				got.Weather != tt.wantWx || got.Status != tt.wantStat || got.Hint != tt.wantHint {
+				t.Fatalf("flags = header:%v banner:%v weather:%v status:%v hint:%v, want %v/%v/%v/%v/%v",
+					got.Header, got.Banner, got.Weather, got.Status, got.Hint,
+					tt.wantHdr, tt.wantBan, tt.wantWx, tt.wantStat, tt.wantHint)
 			}
-			if got.Stage.H != tt.wantStage {
-				t.Fatalf("stage height = %d, want %d", got.Stage.H, tt.wantStage)
-			}
-			if got.Stage.Y != tt.wantTop {
-				t.Fatalf("stage y = %d, want %d", got.Stage.Y, tt.wantTop)
+			if tt.width == 0 && got.Width != 0 {
+				t.Fatalf("expected zero layout, got %#v", got)
 			}
 		})
 	}
 }
 
-func TestComputeIgnoresEmptySize(t *testing.T) {
-	if got := compute(0, 0, false); got.Width != 0 {
-		t.Fatalf("expected zero layout, got %#v", got)
+func TestComputeRowsNeverExceedHeight(t *testing.T) {
+	for _, size := range [][2]int{{10, 3}, {100, 8}, {40, 15}, {30, 30}} {
+		for _, banner := range []bool{false, true} {
+			l := compute(size[0], size[1], banner)
+			rows := 0
+			if l.Header {
+				rows++
+			}
+			if l.Banner {
+				rows += bannerRows
+			}
+			for _, on := range []bool{l.Weather, l.Status, l.Hint} {
+				if on {
+					rows++
+				}
+			}
+			if rows > size[1] {
+				t.Fatalf("size %dx%d banner=%v: %d rows exceeds height", size[0], size[1], banner, rows)
+			}
+		}
 	}
 }

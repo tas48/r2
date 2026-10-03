@@ -2,19 +2,20 @@ package app
 
 import (
 	"fmt"
-	"math/rand"
+	"net/http"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/tas48/r2/internal/agent"
 	"github.com/tas48/r2/internal/config"
-	"github.com/tas48/r2/internal/pet"
 	"github.com/tas48/r2/internal/store"
 	"github.com/tas48/r2/internal/ui"
+	"github.com/tas48/r2/internal/weather"
 )
 
-// Run wires config, persistence, the agent and the TUI, then runs the program.
+// Run wires config, persistence, the agent, weather and the TUI, then runs the
+// program.
 func Run() error {
 	now := time.Now()
 
@@ -39,9 +40,9 @@ func Run() error {
 	ag := agent.New(toAgentConfig(cfg), now)
 	ag.Seed(toAgentState(st), now)
 
-	companion := pet.New(now, rand.New(rand.NewSource(time.Now().UnixNano())))
+	provider := weather.NewOpenMeteo(&http.Client{Timeout: 10 * time.Second}, cfg.RainThreshold, cfg.RainHorizonH)
 
-	if _, err := tea.NewProgram(ui.New(ag, companion, persistFunc(statePath))).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.New(ag, provider, cfg.City, persistFunc(statePath))).Run(); err != nil {
 		return fmt.Errorf("running tui: %w", err)
 	}
 	return nil
@@ -56,10 +57,11 @@ func persistFunc(path string) func(agent.State) error {
 
 func toAgentConfig(c config.Config) agent.Config {
 	return agent.Config{
-		WaterGoalML: c.WaterGoalML,
-		BottleML:    c.BottleML,
-		WaterEvery:  time.Duration(c.WaterEvery),
-		BreakEvery:  time.Duration(c.BreakEvery),
+		WaterGoalML:  c.WaterGoalML,
+		BottleML:     c.BottleML,
+		WaterEvery:   time.Duration(c.WaterEvery),
+		BreakEvery:   time.Duration(c.BreakEvery),
+		WeatherEvery: time.Duration(c.WeatherEvery),
 	}
 }
 
