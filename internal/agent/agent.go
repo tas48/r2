@@ -7,18 +7,20 @@ const dayLayout = "2006-01-02"
 // Config holds the tunable parameters of the agent. Defaults are hardcoded for
 // now; configuration loading will overwrite them in a later step.
 type Config struct {
-	WaterGoalML int
-	BottleML    int
-	WaterEvery  time.Duration
-	BreakEvery  time.Duration
+	WaterGoalML  int
+	BottleML     int
+	WaterEvery   time.Duration
+	BreakEvery   time.Duration
+	WeatherEvery time.Duration
 }
 
 func DefaultConfig() Config {
 	return Config{
-		WaterGoalML: 2000,
-		BottleML:    500,
-		WaterEvery:  30 * time.Minute,
-		BreakEvery:  45 * time.Minute,
+		WaterGoalML:  2000,
+		BottleML:     500,
+		WaterEvery:   30 * time.Minute,
+		BreakEvery:   45 * time.Minute,
+		WeatherEvery: 15 * time.Minute,
 	}
 }
 
@@ -30,6 +32,10 @@ type Agent struct {
 	water  WaterTracker
 	breaks BreakTracker
 	sched  scheduler
+
+	rainProb   int
+	rainLikely bool
+	weatherErr error
 }
 
 func New(cfg Config, now time.Time) *Agent {
@@ -66,6 +72,12 @@ func (a *Agent) LogBreak(now time.Time) []Event {
 	return []Event{a.breaks.logBreak(now)}
 }
 
+// ApplyWeather records a forecast result and returns the resulting event.
+func (a *Agent) ApplyWeather(rainProb int, tempC float64, rainLikely bool, err error, now time.Time) []Event {
+	a.rainProb, a.rainLikely, a.weatherErr = rainProb, rainLikely, err
+	return []Event{WeatherUpdated{RainProb: rainProb, TempC: tempC, RainLikely: rainLikely, Err: err, At: now}}
+}
+
 func (a *Agent) Water() WaterTracker  { return a.water }
 func (a *Agent) Breaks() BreakTracker { return a.breaks }
 func (a *Agent) Config() Config       { return a.cfg }
@@ -76,6 +88,8 @@ func (a *Agent) fire(kind Kind, now time.Time) Event {
 		return ReminderFired{Kind: KindWater, Text: waterReminder(a.water), At: now}
 	case KindBreak:
 		return ReminderFired{Kind: KindBreak, Text: breakReminder(), At: now}
+	case KindWeather:
+		return WeatherRequested{At: now}
 	default:
 		return ReminderFired{Kind: kind, At: now}
 	}

@@ -9,3 +9,8 @@ func waterReminder(w WaterTracker) string {
 func breakReminder() string {
 	return "Time for a break — stand up and stretch"
 }
+
+// rainReminder suggests closing the window when rain is likely.
+func rainReminder(prob int) string {
+	return fmt.Sprintf("Rain likely (%d%%) — close the window", prob)
+}

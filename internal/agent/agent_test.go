@@ -8,7 +8,9 @@ import (
 var base = time.Date(2026, time.September, 30, 9, 0, 0, 0, time.Local)
 
 func newTestAgent() *Agent {
-	return New(DefaultConfig(), base)
+	cfg := DefaultConfig()
+	cfg.WeatherEvery = 0
+	return New(cfg, base)
 }
 
 func TestStepDoesNotFireBeforeInterval(t *testing.T) {
@@ -27,6 +29,20 @@ func TestStepFiresWaterAtInterval(t *testing.T) {
 	rem, ok := events[0].(ReminderFired)
 	if !ok || rem.Kind != KindWater {
 		t.Fatalf("expected water reminder, got %#v", events[0])
+	}
+}
+
+func TestStepEmitsWeatherRequestAfterWeatherInterval(t *testing.T) {
+	a := New(DefaultConfig(), base)
+	events := a.Step(base.Add(15 * time.Minute))
+	found := false
+	for _, ev := range events {
+		if _, ok := ev.(WeatherRequested); ok {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a weather request, got %v", events)
 	}
 }
 

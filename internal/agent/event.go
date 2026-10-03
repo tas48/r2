@@ -8,6 +8,7 @@ type Kind uint8
 const (
 	KindWater Kind = iota
 	KindBreak
+	KindWeather
 )
 
 func (k Kind) String() string {
@@ -16,6 +17,8 @@ func (k Kind) String() string {
 		return "water"
 	case KindBreak:
 		return "break"
+	case KindWeather:
+		return "weather"
 	default:
 		return "unknown"
 	}
@@ -58,3 +61,21 @@ type DayRolled struct {
 }
 
 func (DayRolled) isEvent() {}
+
+// WeatherRequested asks the UI to fetch a forecast (the agent does no IO).
+type WeatherRequested struct {
+	At time.Time
+}
+
+func (WeatherRequested) isEvent() {}
+
+// WeatherUpdated reports the result of a forecast fetch.
+type WeatherUpdated struct {
+	RainProb   int
+	TempC      float64
+	RainLikely bool
+	Err        error
+	At         time.Time
+}
+
+func (WeatherUpdated) isEvent() {}

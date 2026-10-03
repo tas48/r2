@@ -18,6 +18,9 @@ func newScheduler(now time.Time, cfg Config) scheduler {
 	var s scheduler
 	s.add(KindWater, cfg.WaterEvery, now)
 	s.add(KindBreak, cfg.BreakEvery, now)
+	if cfg.WeatherEvery > 0 {
+		s.add(KindWeather, cfg.WeatherEvery, now)
+	}
 	return s
 }
 
